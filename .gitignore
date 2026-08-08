@@ -1,0 +1,17 @@
+bin/
+obj/
+*.user
+*.suo
+[Tt]est[Rr]esult*/
+*.trx
+node_modules/
+dist/
+.angular/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*.env
+appsettings.Development.json
+appsettings.Local.json
+*.log
+docker-compose.override.yml
