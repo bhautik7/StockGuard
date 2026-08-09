@@ -4,7 +4,8 @@ using FluentValidation;
 using StockGuard.Application.Interfaces;
 using StockGuard.Infrastructure.Repositories;
 using StockGuard.Application.Validators;
-
+using Microsoft.AspNetCore.Identity;
+using StockGuard.Infrastructure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,18 @@ builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProductRequestValidator>();
 builder.Services.AddControllers();
+
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+{
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = false;
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+
+
 var app = builder.Build();
 
 app.MapControllers();
@@ -53,6 +66,13 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
+
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+    await RoleSeeder.SeedAsync(roleManager);
+}
+
 
 app.Run();
 
