@@ -3,7 +3,7 @@ namespace StockGuard.Domain.Entities;
 public class Product
 {
     public Guid Id { get; set; }
-    public string Sku { get; set; } = string.Empty;
+    public string Sku { get; set; } = string.Empty; //stock keeping unit
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string Unit { get; set; } = "each"; // e.g. "each", "kg", "litre"
