@@ -1,5 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using StockGuard.Infrastructure.Persistence;
+using FluentValidation;
+using StockGuard.Application.Interfaces;
+using StockGuard.Infrastructure.Repositories;
+using StockGuard.Application.Validators;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,12 +15,22 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateProductRequestValidator>();
+builder.Services.AddControllers();
 var app = builder.Build();
 
+app.MapControllers();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/openapi/v1.json", "StockGuard API v1");
+});
 }
 
 app.UseHttpsRedirection();

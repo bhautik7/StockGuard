@@ -1,0 +1,4 @@
+namespace StockGuard.Application.DTOs;
+
+public record CategoryDto(Guid Id, string Name, string? Description);
+public record CreateCategoryRequest(string Name, string? Description);
