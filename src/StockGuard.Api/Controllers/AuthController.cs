@@ -11,11 +11,13 @@ public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly JwtTokenGenerator _tokenGenerator;
 
-    public AuthController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
+    public AuthController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, JwtTokenGenerator tokenGenerator)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _tokenGenerator = tokenGenerator;
     }
 
     [HttpPost("register")]
@@ -36,8 +38,11 @@ public class AuthController : ControllerBase
         var roleResult = await _userManager.AddToRoleAsync(user, request.Role);
         if (!roleResult.Succeeded)
             return BadRequest(roleResult.Errors.Select(e => e.Description));
+        
+        var token = _tokenGenerator.GenerateToken(user, new List<string> { request.Role });
+        return Ok(new AuthResponse(user.Id, user.Email, user.FullName, request.Role, token));
 
-        return Ok(new AuthResponse(user.Id, user.Email, user.FullName, request.Role));
+    
     }
 
     [HttpPost("login")]
@@ -52,6 +57,7 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid email or password.");
 
         var roles = await _userManager.GetRolesAsync(user);
-        return Ok(new AuthResponse(user.Id, user.Email!, user.FullName, roles.FirstOrDefault() ?? ""));
+        var token = _tokenGenerator.GenerateToken(user, roles);
+        return Ok(new AuthResponse(user.Id, user.Email!, user.FullName, roles.FirstOrDefault() ?? "", token));
     }
 }

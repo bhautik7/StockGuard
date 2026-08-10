@@ -6,12 +6,39 @@ using StockGuard.Infrastructure.Repositories;
 using StockGuard.Application.Validators;
 using Microsoft.AspNetCore.Identity;
 using StockGuard.Infrastructure.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.OpenApi;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter: Bearer {your token}"
+    });
+
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+{
+    {
+        new OpenApiSecuritySchemeReference("Bearer", document),
+        new List<string>()
+    }
+});
+});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -21,6 +48,7 @@ builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProductRequestValidator>();
 builder.Services.AddControllers();
+builder.Services.AddScoped<JwtTokenGenerator>();
 
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -33,16 +61,41 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 .AddDefaultTokenProviders();
 
 
+
+var jwtKey = builder.Configuration["Jwt:Key"]!;
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
+
 var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
     app.UseSwaggerUI(options =>
 {
-    options.SwaggerEndpoint("/openapi/v1.json", "StockGuard API v1");
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "StockGuard API v1");
 });
 }
 
