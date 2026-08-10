@@ -49,6 +49,13 @@ builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProductRequestValidator>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<JwtTokenGenerator>();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Administrator"));
+    options.AddPolicy("InventoryManagerOrAdmin", policy => policy.RequireRole("Administrator", "InventoryManager"));
+    options.AddPolicy("PurchasingOrAdmin", policy => policy.RequireRole("Administrator", "PurchasingOfficer"));
+    options.AddPolicy("WarehouseStaff", policy => policy.RequireRole("Administrator", "InventoryManager", "WarehouseEmployee"));
+});
 
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
