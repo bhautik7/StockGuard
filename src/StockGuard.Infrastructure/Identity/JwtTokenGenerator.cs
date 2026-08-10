@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-
+using StockGuard.Domain.Entities;
 namespace StockGuard.Infrastructure.Identity;
 
 public class JwtTokenGenerator
@@ -33,5 +33,16 @@ public class JwtTokenGenerator
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public RefreshToken GenerateRefreshToken(Guid userId)
+    {
+        return new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64)),
+            ExpiresAtUtc = DateTime.UtcNow.AddDays(7)
+        };
     }
 }

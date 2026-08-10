@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using StockGuard.Application.DTOs;
 using StockGuard.Infrastructure.Identity;
-
+using StockGuard.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 namespace StockGuard.Api.Controllers;
 
 [ApiController]
@@ -12,12 +13,14 @@ public class AuthController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly JwtTokenGenerator _tokenGenerator;
+    private readonly AppDbContext _context;   
 
-    public AuthController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, JwtTokenGenerator tokenGenerator)
+    public AuthController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, JwtTokenGenerator tokenGenerator,AppDbContext context)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenGenerator = tokenGenerator;
+        _context=context;
     }
 
     [HttpPost("register")]
@@ -40,9 +43,11 @@ public class AuthController : ControllerBase
             return BadRequest(roleResult.Errors.Select(e => e.Description));
         
         var token = _tokenGenerator.GenerateToken(user, new List<string> { request.Role });
-        return Ok(new AuthResponse(user.Id, user.Email, user.FullName, request.Role, token));
+        var refreshToken = _tokenGenerator.GenerateRefreshToken(user.Id);
+        _context.RefreshTokens.Add(refreshToken);
+        await _context.SaveChangesAsync();
 
-    
+        return Ok(new AuthResponse(user.Id, user.Email!, user.FullName, request.Role, token, refreshToken.Token));
     }
 
     [HttpPost("login")]
@@ -58,6 +63,31 @@ public class AuthController : ControllerBase
 
         var roles = await _userManager.GetRolesAsync(user);
         var token = _tokenGenerator.GenerateToken(user, roles);
-        return Ok(new AuthResponse(user.Id, user.Email!, user.FullName, roles.FirstOrDefault() ?? "", token));
+        var refreshToken = _tokenGenerator.GenerateRefreshToken(user.Id);
+        _context.RefreshTokens.Add(refreshToken);
+        await _context.SaveChangesAsync();
+
+        return Ok(new AuthResponse(user.Id, user.Email!, user.FullName, roles.FirstOrDefault() ?? "", token, refreshToken.Token));
+    }
+
+    [HttpPost("refresh")]
+    public async Task<ActionResult<AuthResponse>> Refresh([FromBody] string refreshToken)
+    {
+        var stored = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+        if (stored is null || stored.IsRevoked || stored.ExpiresAtUtc < DateTime.UtcNow)
+            return Unauthorized("Invalid or expired refresh token.");
+
+        var user = await _userManager.FindByIdAsync(stored.UserId.ToString());
+        if (user is null) return Unauthorized();
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var newToken = _tokenGenerator.GenerateToken(user, roles);
+
+        stored.IsRevoked = true; // old refresh token can't be reused
+        var newRefreshToken = _tokenGenerator.GenerateRefreshToken(user.Id);
+        _context.RefreshTokens.Add(newRefreshToken);
+        await _context.SaveChangesAsync();
+
+        return Ok(new AuthResponse(user.Id, user.Email!, user.FullName, roles.FirstOrDefault() ?? "", newToken, newRefreshToken.Token));
     }
 }
