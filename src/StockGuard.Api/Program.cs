@@ -12,7 +12,7 @@ using System.Text;
 using Microsoft.OpenApi;
 using StockGuard.Application.Services;
 using System.IdentityModel.Tokens.Jwt;
-
+using StockGuard.Api.Hubs;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
@@ -54,6 +54,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateProductRequestValidat
 builder.Services.AddControllers();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddScoped<FefoAllocationService>();
+builder.Services.AddSignalR();
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = builder.Configuration.GetConnectionString("Redis");
@@ -101,6 +102,7 @@ var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<AlertsHub>("/hubs/alerts");
 app.MapControllers();
 
 if (app.Environment.IsDevelopment())

@@ -9,11 +9,13 @@ public class ExpiryCheckWorker : BackgroundService
 {
     private readonly IServiceProvider _services;
     private readonly ILogger<ExpiryCheckWorker> _logger;
+    private readonly AlertBroadcaster _broadcaster;
 
-    public ExpiryCheckWorker(IServiceProvider services, ILogger<ExpiryCheckWorker> logger)
+    public ExpiryCheckWorker(IServiceProvider services, ILogger<ExpiryCheckWorker> logger, AlertBroadcaster broadcaster)
     {
         _services = services;
         _logger = logger;
+        _broadcaster = broadcaster;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -27,13 +29,13 @@ public class ExpiryCheckWorker : BackgroundService
             await Task.Delay(TimeSpan.FromMinutes(60), stoppingToken);
         }
     }
+
     private async Task CheckLowStockAsync(CancellationToken ct)
     {
         using var scope = _services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var alertRepo = scope.ServiceProvider.GetRequiredService<IAlertRepository>();
 
-        // Sum available quantity per product, compare against each product's ReorderLevel
         var products = await context.Products.ToListAsync(ct);
 
         foreach (var product in products)
@@ -55,6 +57,7 @@ public class ExpiryCheckWorker : BackgroundService
                 RelatedEntityId = product.Id
             });
             _logger.LogInformation("Created low-stock alert for product {ProductId}", product.Id);
+            await _broadcaster.BroadcastAlertAsync($"New alert: {product.Name} is below reorder level.");
         }
 
         await alertRepo.SaveChangesAsync(ct);
@@ -84,6 +87,7 @@ public class ExpiryCheckWorker : BackgroundService
                 RelatedEntityId = batch.Id
             });
             _logger.LogInformation("Created quarantine alert for batch {BatchId}", batch.Id);
+            await _broadcaster.BroadcastAlertAsync($"New alert: {batch.Product.Name} (batch {batch.BatchNumber}) is quarantined.");
         }
 
         await alertRepo.SaveChangesAsync(ct);
@@ -116,10 +120,12 @@ public class ExpiryCheckWorker : BackgroundService
                 RelatedEntityId = order.Id
             });
             _logger.LogInformation("Created delayed-PO alert for order {OrderId}", order.Id);
+            await _broadcaster.BroadcastAlertAsync($"New alert: Purchase order {order.OrderNumber} is delayed.");
         }
 
         await alertRepo.SaveChangesAsync(ct);
     }
+
     private async Task CheckExpiringBatchesAsync(CancellationToken ct)
     {
         using var scope = _services.CreateScope();
@@ -136,7 +142,7 @@ public class ExpiryCheckWorker : BackgroundService
         foreach (var batch in expiringBatches)
         {
             var alreadyAlerted = await alertRepo.ExistsUnresolvedAsync(AlertType.ExpiringSoon, batch.Id, ct);
-            if (alreadyAlerted) continue; // duplicate prevention
+            if (alreadyAlerted) continue;
 
             alertRepo.Add(new Alert
             {
@@ -147,6 +153,7 @@ public class ExpiryCheckWorker : BackgroundService
             });
 
             _logger.LogInformation("Created expiry alert for batch {BatchId}", batch.Id);
+            await _broadcaster.BroadcastAlertAsync($"New alert: {batch.Product.Name} expires soon.");
         }
 
         await alertRepo.SaveChangesAsync(ct);
