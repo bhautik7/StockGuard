@@ -13,13 +13,9 @@ using Microsoft.OpenApi;
 using StockGuard.Application.Services;
 using System.IdentityModel.Tokens.Jwt;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -34,12 +30,12 @@ builder.Services.AddSwaggerGen(options =>
     });
 
     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-{
     {
-        new OpenApiSecuritySchemeReference("Bearer", document),
-        new List<string>()
-    }
-});
+        {
+            new OpenApiSecuritySchemeReference("Bearer", document),
+            new List<string>()
+        }
+    });
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -53,10 +49,12 @@ builder.Services.AddScoped<IInventoryBatchRepository, InventoryBatchRepository>(
 builder.Services.AddScoped<IStockTransactionRepository, StockTransactionRepository>();
 builder.Services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
 builder.Services.AddScoped<IStockReservationRepository, StockReservationRepository>();
+builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProductRequestValidator>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddScoped<FefoAllocationService>();
+
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Administrator"));
@@ -64,7 +62,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("PurchasingOrAdmin", policy => policy.RequireRole("Administrator", "PurchasingOfficer"));
     options.AddPolicy("WarehouseStaff", policy => policy.RequireRole("Administrator", "InventoryManager", "WarehouseEmployee"));
 });
-
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 {
@@ -75,10 +72,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-
-
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -102,39 +98,19 @@ var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-// Configure the HTTP request pipeline.
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI(options =>
-{
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "StockGuard API v1");
-});
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "StockGuard API v1");
+    });
 }
 
 app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
 
 using (var scope = app.Services.CreateScope())
 {
@@ -142,10 +118,4 @@ using (var scope = app.Services.CreateScope())
     await RoleSeeder.SeedAsync(roleManager);
 }
 
-
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
