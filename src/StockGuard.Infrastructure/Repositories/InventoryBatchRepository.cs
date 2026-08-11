@@ -22,4 +22,13 @@ public class InventoryBatchRepository : IInventoryBatchRepository
 
     public void Add(InventoryBatch batch) => _context.InventoryBatches.Add(batch);
     public Task<int> SaveChangesAsync(CancellationToken ct) => _context.SaveChangesAsync(ct);
+
+    public Task<List<InventoryBatch>> GetAvailableForProductAsync(Guid productId, CancellationToken ct) =>
+    _context.InventoryBatches
+        .Where(b => b.ProductId == productId && b.Status == BatchStatus.Available)
+        .OrderBy(b => b.ExpiryDate)
+        .ToListAsync(ct);
+
+    public Task<InventoryBatch?> GetByIdForUpdateAsync(Guid id, CancellationToken ct) =>
+        _context.InventoryBatches.FirstOrDefaultAsync(b => b.Id == id, ct);
 }

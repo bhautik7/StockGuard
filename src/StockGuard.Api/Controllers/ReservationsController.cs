@@ -1,0 +1,89 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using StockGuard.Application.DTOs;
+using StockGuard.Application.Interfaces;
+using StockGuard.Application.Services;
+using StockGuard.Domain.Entities;
+
+namespace StockGuard.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize(Policy = "WarehouseStaff")]
+public class ReservationsController : ControllerBase
+{
+    private readonly IInventoryBatchRepository _batchRepo;
+    private readonly IStockReservationRepository _reservationRepo;
+    private readonly IStockTransactionRepository _transactionRepo;
+    private readonly FefoAllocationService _fefoService;
+
+    public ReservationsController(
+        IInventoryBatchRepository batchRepo,
+        IStockReservationRepository reservationRepo,
+        IStockTransactionRepository transactionRepo,
+        FefoAllocationService fefoService)
+    {
+        _batchRepo = batchRepo;
+        _reservationRepo = reservationRepo;
+        _transactionRepo = transactionRepo;
+        _fefoService = fefoService;
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<ReservationDto>> Reserve(ReserveInventoryRequest request, CancellationToken ct)
+    {
+        if (request.Quantity <= 0)
+            return BadRequest("Quantity must be greater than zero.");
+
+        var userId = Guid.Parse(User.FindFirst("sub")!.Value);
+        var availableBatches = await _batchRepo.GetAvailableForProductAsync(request.ProductId, ct);
+
+        List<BatchAllocation> allocations;
+        try
+        {
+            allocations = _fefoService.Allocate(availableBatches, request.Quantity);
+        }
+        catch (InsufficientStockException ex)
+        {
+            return Conflict(ex.Message);
+        }
+
+        var reservation = new StockReservation
+        {
+            Id = Guid.NewGuid(),
+            ReservedByUserId = userId,
+            Status = ReservationStatus.Active,
+            IdempotencyKey = request.IdempotencyKey
+        };
+
+        foreach (var allocation in allocations)
+        {
+            var batch = await _batchRepo.GetByIdForUpdateAsync(allocation.BatchId, ct);
+            batch!.QuantityReserved += allocation.Quantity;
+
+            reservation.Lines.Add(new StockReservationLine
+            {
+                Id = Guid.NewGuid(),
+                InventoryBatchId = batch.Id,
+                Quantity = allocation.Quantity
+            });
+
+            _transactionRepo.Add(new StockTransaction
+            {
+                Id = Guid.NewGuid(),
+                InventoryBatchId = batch.Id,
+                Type = StockTransactionType.Reservation,
+                QuantityChange = -allocation.Quantity, // negative — reserving reduces what's freely available
+                PerformedByUserId = userId,
+                Reference = reservation.Id.ToString()
+            });
+        }
+
+        _reservationRepo.Add(reservation);
+        await _reservationRepo.SaveChangesAsync(ct);
+
+        return Ok(new ReservationDto(
+            reservation.Id, reservation.Status.ToString(),
+            reservation.Lines.Select(l => new ReservationLineDto(l.InventoryBatchId, l.Quantity)).ToList()));
+    }
+}

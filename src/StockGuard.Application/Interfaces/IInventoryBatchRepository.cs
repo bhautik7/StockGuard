@@ -8,4 +8,6 @@ public interface IInventoryBatchRepository
     Task<List<InventoryBatch>> GetByProductAsync(Guid productId, CancellationToken ct);
     void Add(InventoryBatch batch);
     Task<int> SaveChangesAsync(CancellationToken ct);
+    Task<List<InventoryBatch>> GetAvailableForProductAsync(Guid productId, CancellationToken ct);
+    Task<InventoryBatch?> GetByIdForUpdateAsync(Guid id, CancellationToken ct);
 }
