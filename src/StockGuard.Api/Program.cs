@@ -55,6 +55,7 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddScoped<FefoAllocationService>();
 builder.Services.AddSignalR();
+
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = builder.Configuration.GetConnectionString("Redis");

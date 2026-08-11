@@ -11,6 +11,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddHostedService<ExpiryCheckWorker>();
-
+builder.Services.AddSingleton(new AlertBroadcaster("http://localhost:5270/hubs/alerts"));
 var host = builder.Build();
 host.Run();
