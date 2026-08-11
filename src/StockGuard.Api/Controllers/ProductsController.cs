@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockGuard.Application.DTOs;
 using StockGuard.Application.Interfaces;
@@ -35,7 +36,7 @@ public class ProductsController : ControllerBase
         if (p is null) return NotFound();
         return Ok(new ProductDto(p.Id, p.Sku, p.Name, p.Description, p.Unit, p.ReorderLevel, p.CategoryId, p.Category.Name));
     }
-
+    [Authorize(Policy = "InventoryManagerOrAdmin")]
     [HttpPost]
     public async Task<ActionResult<ProductDto>> Create(CreateProductRequest request, CancellationToken ct)
     {
