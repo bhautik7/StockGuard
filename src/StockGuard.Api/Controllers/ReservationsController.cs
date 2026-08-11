@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using StockGuard.Application.DTOs;
 using StockGuard.Application.Interfaces;
 using StockGuard.Application.Services;
@@ -34,6 +35,18 @@ public class ReservationsController : ControllerBase
     {
         if (request.Quantity <= 0)
             return BadRequest("Quantity must be greater than zero.");
+        
+            // Idempotency check — if we've already processed this exact request, return the original result
+        if (!string.IsNullOrEmpty(request.IdempotencyKey))
+        {
+            var existing = await _reservationRepo.GetByIdempotencyKeyAsync(request.IdempotencyKey, ct);
+            if (existing is not null)
+            {
+                return Ok(new ReservationDto(
+                    existing.Id, existing.Status.ToString(),
+                    existing.Lines.Select(l => new ReservationLineDto(l.InventoryBatchId, l.Quantity)).ToList()));
+            }
+        }
 
         var userId = Guid.Parse(User.FindFirst("sub")!.Value);
         var availableBatches = await _batchRepo.GetAvailableForProductAsync(request.ProductId, ct);
@@ -80,10 +93,17 @@ public class ReservationsController : ControllerBase
         }
 
         _reservationRepo.Add(reservation);
-        await _reservationRepo.SaveChangesAsync(ct);
+        try
+        {
+            await _reservationRepo.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("The requested stock was reserved by someone else at the same time. Please try again.");
+        }
 
         return Ok(new ReservationDto(
             reservation.Id, reservation.Status.ToString(),
             reservation.Lines.Select(l => new ReservationLineDto(l.InventoryBatchId, l.Quantity)).ToList()));
-    }
+        }
 }
