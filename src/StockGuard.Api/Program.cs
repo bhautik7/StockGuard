@@ -54,7 +54,10 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateProductRequestValidat
 builder.Services.AddControllers();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddScoped<FefoAllocationService>();
-
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+});
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Administrator"));
