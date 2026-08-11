@@ -4,7 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using StockGuard.Application.DTOs;
 using StockGuard.Application.Interfaces;
 using StockGuard.Domain.Entities;
-
+using StockGuard.Infrastructure.Persistence;
+using System.Text.Json;
 namespace StockGuard.Api.Controllers;
 
 [ApiController]
@@ -13,11 +14,13 @@ public class InventoryBatchesController : ControllerBase
 {
     private readonly IInventoryBatchRepository _repo;
     private readonly IStockTransactionRepository _transactionRepo;
-
-    public InventoryBatchesController(IInventoryBatchRepository repo, IStockTransactionRepository transactionRepo)
+    
+    private readonly AppDbContext _context; 
+    public InventoryBatchesController(IInventoryBatchRepository repo, IStockTransactionRepository transactionRepo,AppDbContext context)
     {
         _repo = repo;
         _transactionRepo = transactionRepo;
+        _context=context;
     }
    
 
@@ -58,6 +61,15 @@ public async Task<ActionResult<InventoryBatchDto>> Receive(ReceiveInventoryReque
         PerformedByUserId = userId,
         Reference = request.BatchNumber
     });
+    
+
+    var outboxMessage = new OutboxMessage
+    {
+        Id = Guid.NewGuid(),
+        Type = "InventoryReceived",
+        Payload = JsonSerializer.Serialize(new { batch.Id, batch.ProductId, batch.WarehouseId, Quantity = request.Quantity })
+    };
+    _context.OutboxMessages.Add(outboxMessage); // needs AppDbContext injected — see below
 
     await _repo.SaveChangesAsync(ct); // one save — both rows commit together
 
