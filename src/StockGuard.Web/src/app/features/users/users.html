@@ -1,0 +1,56 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Users</h1>
+      <p class="page-subtitle">Register a new StockGuard account and assign it a role.</p>
+    </div>
+  </div>
+
+  <div class="card form-card">
+    <form class="stack" (ngSubmit)="register()">
+      <div class="field-row">
+        <div class="field">
+          <label for="fullName">Full Name</label>
+          <input id="fullName" class="input" [(ngModel)]="form.fullName" name="fullName" required />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" class="input" type="email" [(ngModel)]="form.email" name="email" required />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" class="input" type="password" [(ngModel)]="form.password" name="password" minlength="8" required />
+        </div>
+        <div class="field">
+          <label for="role">Role</label>
+          <select id="role" class="input" [(ngModel)]="form.role" name="role" required>
+            @for (role of roles; track role) {
+              <option [value]="role">{{ role }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (error()) {
+        <div class="callout callout-error">{{ error() }}</div>
+      }
+
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Creating…' : 'Create User' }}
+      </button>
+    </form>
+  </div>
+
+  @if (registered().length > 0) {
+    <div class="section-toolbar">
+      <h2>Created this session</h2>
+    </div>
+    <ul class="registered-list">
+      @for (entry of registered(); track entry) {
+        <li class="callout callout-success">{{ entry }}</li>
+      }
+    </ul>
+  }
+</div>

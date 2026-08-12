@@ -8,6 +8,7 @@ public interface IProductRepository
     Task<bool> SkuExistsAsync(string sku, CancellationToken ct);
     void Add(Product product);
     void Update(Product product);
+    void Delete(Product product);
     Task<int> SaveChangesAsync(CancellationToken ct);
 
 }

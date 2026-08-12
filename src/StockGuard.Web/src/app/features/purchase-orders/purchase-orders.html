@@ -1,0 +1,215 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Purchase Orders</h1>
+      <p class="page-subtitle">Create orders, get them approved, and receive stock as it arrives.</p>
+    </div>
+    @if (canCreateOrCancel()) {
+      <button class="btn btn-primary" (click)="openCreate()">New Purchase Order</button>
+    }
+  </div>
+
+  @if (actionError()) {
+    <div class="callout callout-error page-error">{{ actionError() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="card empty-state">Loading purchase orders…</div>
+  } @else if (orders().length === 0) {
+    <div class="card empty-state"><p>No purchase orders yet.</p></div>
+  } @else {
+    <div class="po-list">
+      @for (order of orders(); track order.id) {
+        <div class="card po-card">
+          <div class="po-card-header" (click)="toggleExpand(order)">
+            <div>
+              <span class="cell-name">{{ order.orderNumber }}</span>
+              <span class="po-supplier">{{ order.supplierName }}</span>
+            </div>
+            <div class="po-header-right">
+              <span class="badge" [class]="statusBadge(order.status)">{{ order.status }}</span>
+              <span class="expand-icon">{{ expandedId() === order.id ? '−' : '+' }}</span>
+            </div>
+          </div>
+
+          @if (expandedId() === order.id) {
+            <div class="po-detail">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Ordered</th>
+                    <th>Received</th>
+                    <th>Expected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (line of order.lines; track line.productId) {
+                    <tr>
+                      <td>{{ line.productName }}</td>
+                      <td>{{ line.quantityOrdered }}</td>
+                      <td>{{ line.quantityReceived }}</td>
+                      <td>{{ line.expectedDeliveryDate }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+
+              <div class="po-actions">
+                @if (order.status === 'Draft' && canCreateOrCancel()) {
+                  <button class="btn btn-primary btn-sm" [disabled]="actionBusyId() === order.id" (click)="submit(order)">Submit</button>
+                  <button class="btn btn-danger btn-sm" [disabled]="actionBusyId() === order.id" (click)="cancel(order)">Cancel</button>
+                }
+                @if (order.status === 'Submitted') {
+                  @if (canApprove()) {
+                    <button class="btn btn-primary btn-sm" [disabled]="actionBusyId() === order.id" (click)="approve(order)">Approve</button>
+                  }
+                  @if (canCreateOrCancel()) {
+                    <button class="btn btn-danger btn-sm" [disabled]="actionBusyId() === order.id" (click)="cancel(order)">Cancel</button>
+                  }
+                }
+                @if ((order.status === 'Approved' || order.status === 'PartiallyReceived') && canReceive()) {
+                  <button class="btn btn-primary btn-sm" (click)="openReceive(order)">Receive</button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (showCreate()) {
+  <app-modal title="New Purchase Order" (closed)="closeCreate()">
+    <form class="stack" (ngSubmit)="submitCreate()">
+      <div class="field">
+        <label for="supplierId">Supplier</label>
+        <select id="supplierId" class="input" [(ngModel)]="createSupplierId" name="supplierId" required>
+          @for (s of suppliers(); track s.id) {
+            <option [value]="s.id">{{ s.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field autocomplete">
+        <label for="lineProduct">Add Line — Product</label>
+        <input
+          id="lineProduct"
+          class="input"
+          [(ngModel)]="lineProductQuery"
+          (input)="onLineProductQueryChange()"
+          name="lineProduct"
+          placeholder="Search by product name or SKU..."
+          autocomplete="off"
+        />
+        @if (lineProductQuery.trim() && lineProductSuggestions().length > 0) {
+          <div class="suggestions">
+            @for (product of lineProductSuggestions(); track product.id) {
+              <button type="button" class="suggestion-item" (mousedown)="addLine(product)">
+                <span class="suggestion-name">{{ product.name }}</span>
+                <span class="sku">{{ product.sku }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="lineQuantity">Quantity</label>
+          <input id="lineQuantity" class="input" type="number" min="1" [(ngModel)]="lineQuantity" name="lineQuantity" />
+        </div>
+        <div class="field">
+          <label for="lineExpectedDate">Expected Delivery</label>
+          <input id="lineExpectedDate" class="input" type="date" [(ngModel)]="lineExpectedDate" name="lineExpectedDate" />
+        </div>
+      </div>
+      <p class="field-hint">Set quantity/date, then click a product above to add it as a line.</p>
+
+      @if (draftLines().length > 0) {
+        <table class="table draft-lines">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Qty</th>
+              <th>Expected</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of draftLines(); track line.productId) {
+              <tr>
+                <td>{{ line.productName }}</td>
+                <td>{{ line.quantityOrdered }}</td>
+                <td>{{ line.expectedDeliveryDate }}</td>
+                <td class="table-actions">
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="removeLine(line.productId)">Remove</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      @if (createError()) {
+        <div class="callout callout-error">{{ createError() }}</div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="closeCreate()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="creating()">{{ creating() ? 'Creating…' : 'Create Order' }}</button>
+      </div>
+    </form>
+  </app-modal>
+}
+
+@if (showReceive() && receiveOrder) {
+  <app-modal [title]="'Receive — ' + receiveOrder.orderNumber" (closed)="closeReceive()">
+    <div class="stack">
+      @for (line of receiveLines; track line.productId) {
+        <div class="receive-line">
+          <div class="receive-line-header">
+            <span class="cell-name">{{ line.productName }}</span>
+            <span class="field-hint">{{ line.remaining }} outstanding</span>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Quantity Received</label>
+              <input class="input" type="number" min="0" [max]="line.remaining" [(ngModel)]="line.quantityReceived" [name]="'qty-' + line.productId" />
+            </div>
+            <div class="field">
+              <label>Warehouse</label>
+              <select class="input" [(ngModel)]="line.warehouseId" [name]="'wh-' + line.productId">
+                @for (w of warehouses(); track w.id) {
+                  <option [value]="w.id">{{ w.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Batch Number</label>
+              <input class="input" [(ngModel)]="line.batchNumber" [name]="'batch-' + line.productId" />
+            </div>
+            <div class="field">
+              <label>Expiry Date</label>
+              <input class="input" type="date" [(ngModel)]="line.expiryDate" [name]="'exp-' + line.productId" />
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (receiveError()) {
+        <div class="callout callout-error">{{ receiveError() }}</div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="closeReceive()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="receiving()" (click)="submitReceive()">
+          {{ receiving() ? 'Receiving…' : 'Confirm Receipt' }}
+        </button>
+      </div>
+    </div>
+  </app-modal>
+}

@@ -1,0 +1,75 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Suppliers</h1>
+      <p class="page-subtitle">Vendors you purchase inventory from.</p>
+    </div>
+    @if (canManage()) {
+      <button class="btn btn-primary" (click)="openCreate()">New Supplier</button>
+    }
+  </div>
+
+  <div class="table-wrap">
+    @if (loading()) {
+      <div class="empty-state">Loading suppliers…</div>
+    } @else if (suppliers().length === 0) {
+      <div class="empty-state"><p>No suppliers yet.</p></div>
+    } @else {
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Contact Email</th>
+            <th>Contact Phone</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (supplier of suppliers(); track supplier.id) {
+            <tr>
+              <td class="cell-name">{{ supplier.name }}</td>
+              <td>{{ supplier.contactEmail || '—' }}</td>
+              <td>{{ supplier.contactPhone || '—' }}</td>
+              <td class="table-actions">
+                @if (canManage()) {
+                  <button class="btn btn-secondary btn-sm" (click)="openEdit(supplier)">Edit</button>
+                  <button class="btn btn-danger btn-sm" (click)="deleteSupplier(supplier)">Delete</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>
+
+@if (showForm()) {
+  <app-modal [title]="editingId() ? 'Edit Supplier' : 'New Supplier'" (closed)="closeForm()">
+    <form class="stack" (ngSubmit)="save()">
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" class="input" [(ngModel)]="form.name" name="name" required />
+      </div>
+      <div class="field">
+        <label for="contactEmail">Contact Email</label>
+        <input id="contactEmail" class="input" type="email" [(ngModel)]="form.contactEmail" name="contactEmail" />
+      </div>
+      <div class="field">
+        <label for="contactPhone">Contact Phone</label>
+        <input id="contactPhone" class="input" [(ngModel)]="form.contactPhone" name="contactPhone" />
+      </div>
+
+      @if (formError()) {
+        <div class="callout callout-error">{{ formError() }}</div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="closeForm()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+}

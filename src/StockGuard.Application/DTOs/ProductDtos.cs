@@ -8,4 +8,8 @@ public record CreateProductRequest(
     string Sku, string Name, string? Description,
     string Unit, int ReorderLevel, Guid CategoryId);
 
+public record UpdateProductRequest(
+    string Sku, string Name, string? Description,
+    string Unit, int ReorderLevel, Guid CategoryId);
+
 public record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount, int Page, int PageSize);

@@ -17,5 +17,7 @@ public class WarehouseRepository : IWarehouseRepository
         _context.Warehouses.FirstOrDefaultAsync(w => w.Id == id, ct);
 
     public void Add(Warehouse warehouse) => _context.Warehouses.Add(warehouse);
+    public void Update(Warehouse warehouse) => _context.Warehouses.Update(warehouse);
+    public void Delete(Warehouse warehouse) => _context.Warehouses.Remove(warehouse);
     public Task<int> SaveChangesAsync(CancellationToken ct) => _context.SaveChangesAsync(ct);
 }

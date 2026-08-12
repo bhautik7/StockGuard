@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using StockGuard.Application.DTOs;
 using StockGuard.Application.Interfaces;
 using StockGuard.Domain.Entities;
@@ -54,5 +56,43 @@ public class CategoriesController : ControllerBase
 
         var dto = new CategoryDto(category.Id, category.Name, category.Description);
         return CreatedAtAction(nameof(GetAll), dto);
+    }
+
+    [Authorize(Policy = "InventoryManagerOrAdmin")]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<CategoryDto>> Update(Guid id, UpdateCategoryRequest request, CancellationToken ct)
+    {
+        var category = await _repo.GetByIdAsync(id, ct);
+        if (category is null) return NotFound();
+
+        category.Name = request.Name;
+        category.Description = request.Description;
+        _repo.Update(category);
+        await _repo.SaveChangesAsync(ct);
+
+        await _cache.RemoveAsync("categories:all", ct);
+
+        return Ok(new CategoryDto(category.Id, category.Name, category.Description));
+    }
+
+    [Authorize(Policy = "InventoryManagerOrAdmin")]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var category = await _repo.GetByIdAsync(id, ct);
+        if (category is null) return NotFound();
+
+        _repo.Delete(category);
+        try
+        {
+            await _repo.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict("This category still has products assigned to it and cannot be deleted.");
+        }
+
+        await _cache.RemoveAsync("categories:all", ct);
+        return NoContent();
     }
 }

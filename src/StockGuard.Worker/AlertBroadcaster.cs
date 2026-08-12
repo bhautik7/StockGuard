@@ -23,7 +23,7 @@ public class AlertBroadcaster : IAsyncDisposable
     public async Task BroadcastAlertAsync(string message)
     {
         await EnsureConnectedAsync();
-        await _connection.InvokeAsync("ReceiveAlert", message);
+        await _connection.InvokeAsync("BroadcastAlert", message);
     }
 
     public async ValueTask DisposeAsync() => await _connection.DisposeAsync();

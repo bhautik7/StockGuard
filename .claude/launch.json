@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "stockguard-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "src/StockGuard.Web", "start"],
+      "port": 4200
+    }
+  ]
+}

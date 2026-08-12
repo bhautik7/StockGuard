@@ -1,0 +1,205 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Inventory</h1>
+      <p class="page-subtitle">Look up a product to receive, transfer, adjust, or quarantine its stock batches.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field autocomplete">
+      <label for="product">Product</label>
+      <input
+        id="product"
+        class="input"
+        [(ngModel)]="productQuery"
+        (input)="onProductQueryChange()"
+        (focus)="showSuggestions.set(true)"
+        (blur)="hideSuggestionsSoon()"
+        placeholder="Search by product name or SKU..."
+        autocomplete="off"
+      />
+      @if (showSuggestions() && productQuery.trim()) {
+        <div class="suggestions">
+          @if (searching()) {
+            <div class="suggestion-empty">Searching…</div>
+          } @else if (suggestions().length === 0) {
+            <div class="suggestion-empty">No products found.</div>
+          } @else {
+            @for (product of suggestions(); track product.id) {
+              <button type="button" class="suggestion-item" (mousedown)="selectProduct(product)">
+                <span class="suggestion-name">{{ product.name }}</span>
+                <span class="sku">{{ product.sku }}</span>
+              </button>
+            }
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (productId) {
+    <div class="section-toolbar">
+      <h2>Batches for {{ selectedProductName }}</h2>
+      @if (canReceiveOrTransfer()) {
+        <button class="btn btn-primary" (click)="openReceive()">Receive Stock</button>
+      }
+    </div>
+
+    <div class="table-wrap">
+      @if (loadingBatches()) {
+        <div class="empty-state">Loading batches…</div>
+      } @else if (batches().length === 0) {
+        <div class="empty-state"><p>No inventory batches for this product yet.</p></div>
+      } @else {
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Batch</th>
+              <th>Warehouse</th>
+              <th>On Hand</th>
+              <th>Reserved</th>
+              <th>Available</th>
+              <th>Expiry</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (batch of batches(); track batch.id) {
+              <tr>
+                <td class="sku">{{ batch.batchNumber }}</td>
+                <td>{{ batch.warehouseName }}</td>
+                <td>{{ batch.quantityOnHand }}</td>
+                <td>{{ batch.quantityReserved }}</td>
+                <td>{{ batch.quantityAvailable }}</td>
+                <td>{{ batch.expiryDate }}</td>
+                <td><span class="badge" [class]="statusBadge(batch.status)">{{ batch.status }}</span></td>
+                <td class="table-actions">
+                  @if (canReceiveOrTransfer()) {
+                    <button class="btn btn-secondary btn-sm" (click)="openTransfer(batch)">Transfer</button>
+                  }
+                  @if (canAdjustOrQuarantine()) {
+                    <button class="btn btn-secondary btn-sm" (click)="openAdjust(batch)">Adjust</button>
+                    @if (batch.status !== 'Quarantined') {
+                      <button class="btn btn-danger btn-sm" (click)="openQuarantine(batch)">Quarantine</button>
+                    }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+@if (activeModal() === 'receive') {
+  <app-modal title="Receive Stock" (closed)="closeModal()">
+    <form class="stack" (ngSubmit)="submitReceive()">
+      <div class="field">
+        <label for="warehouseId">Warehouse</label>
+        <select id="warehouseId" class="input" [(ngModel)]="receiveForm.warehouseId" name="warehouseId" required>
+          @for (w of warehouses(); track w.id) {
+            <option [value]="w.id">{{ w.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="batchNumber">Batch Number</label>
+        <input id="batchNumber" class="input" [(ngModel)]="receiveForm.batchNumber" name="batchNumber" required />
+      </div>
+      <div class="field">
+        <label for="quantity">Quantity</label>
+        <input id="quantity" class="input" type="number" min="1" [(ngModel)]="receiveForm.quantity" name="quantity" required />
+      </div>
+      <div class="field">
+        <label for="expiryDate">Expiry Date</label>
+        <input id="expiryDate" class="input" type="date" [(ngModel)]="receiveForm.expiryDate" name="expiryDate" required />
+      </div>
+
+      @if (modalError()) {
+        <div class="callout callout-error">{{ modalError() }}</div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Receive' }}</button>
+      </div>
+    </form>
+  </app-modal>
+}
+
+@if (activeModal() === 'transfer') {
+  <app-modal title="Transfer Stock" (closed)="closeModal()">
+    <form class="stack" (ngSubmit)="submitTransfer()">
+      <div class="field">
+        <label for="toWarehouseId">To Warehouse</label>
+        <select id="toWarehouseId" class="input" [(ngModel)]="transferForm.toWarehouseId" name="toWarehouseId" required>
+          @for (w of warehouses(); track w.id) {
+            <option [value]="w.id">{{ w.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="transferQuantity">Quantity</label>
+        <input id="transferQuantity" class="input" type="number" min="1" [(ngModel)]="transferForm.quantity" name="transferQuantity" required />
+      </div>
+
+      @if (modalError()) {
+        <div class="callout callout-error">{{ modalError() }}</div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Transfer' }}</button>
+      </div>
+    </form>
+  </app-modal>
+}
+
+@if (activeModal() === 'adjust') {
+  <app-modal title="Adjust Quantity" (closed)="closeModal()">
+    <form class="stack" (ngSubmit)="submitAdjust()">
+      <div class="field">
+        <label for="quantityChange">Quantity Change</label>
+        <input id="quantityChange" class="input" type="number" [(ngModel)]="adjustForm.quantityChange" name="quantityChange" required />
+        <p class="field-hint">Use a negative number to reduce stock (e.g. damage, spoilage).</p>
+      </div>
+      <div class="field">
+        <label for="reason">Reason</label>
+        <input id="reason" class="input" [(ngModel)]="adjustForm.reason" name="reason" required />
+      </div>
+
+      @if (modalError()) {
+        <div class="callout callout-error">{{ modalError() }}</div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Adjust' }}</button>
+      </div>
+    </form>
+  </app-modal>
+}
+
+@if (activeModal() === 'quarantine') {
+  <app-modal title="Quarantine Batch" (closed)="closeModal()">
+    <form class="stack" (ngSubmit)="submitQuarantine()">
+      <div class="field">
+        <label for="quarantineReason">Reason</label>
+        <input id="quarantineReason" class="input" [(ngModel)]="quarantineForm.reason" name="quarantineReason" required />
+      </div>
+
+      @if (modalError()) {
+        <div class="callout callout-error">{{ modalError() }}</div>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-danger" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Quarantine' }}</button>
+      </div>
+    </form>
+  </app-modal>
+}

@@ -15,7 +15,7 @@ public class InventoryBatchRepository : IInventoryBatchRepository
             .FirstOrDefaultAsync(b => b.Id == id, ct);
 
     public Task<List<InventoryBatch>> GetByProductAsync(Guid productId, CancellationToken ct) =>
-        _context.InventoryBatches.Include(b => b.Warehouse)
+        _context.InventoryBatches.Include(b => b.Product).Include(b => b.Warehouse)
             .Where(b => b.ProductId == productId)
             .OrderBy(b => b.ExpiryDate) // FEFO order — soonest expiry first, ready for later
             .ToListAsync(ct);

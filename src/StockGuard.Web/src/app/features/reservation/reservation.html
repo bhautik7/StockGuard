@@ -1,30 +1,74 @@
-<div class="reservation-page">
-  <h1>Reserve Inventory</h1>
-
-  <label>
-    Product ID
-    <input [(ngModel)]="productId" placeholder="Paste a product ID" />
-  </label>
-  <label>
-    Quantity
-    <input type="number" [(ngModel)]="quantity" min="1" />
-  </label>
-  <button (click)="onReserve()" [disabled]="loading()">
-    {{ loading() ? 'Reserving...' : 'Reserve' }}
-  </button>
-
-  @if (result()) {
-    <div class="success">
-      <p>Reservation {{ result()!.id }} — status: {{ result()!.status }}</p>
-      <ul>
-        @for (line of result()!.lines; track line.inventoryBatchId) {
-          <li>Batch {{ line.inventoryBatchId }}: {{ line.quantity }} units</li>
-        }
-      </ul>
+<div class="page reservation-page">
+  <div class="page-header">
+    <div>
+      <h1>Reserve Inventory</h1>
+      <p class="page-subtitle">Search for a product and reserve stock using FEFO allocation.</p>
     </div>
-  }
+  </div>
 
-  @if (errorMessage()) {
-    <p class="error">{{ errorMessage() }}</p>
-  }
+  <div class="card reservation-card">
+    <div class="field autocomplete">
+      <label for="product">Product</label>
+      <input
+        id="product"
+        class="input"
+        [(ngModel)]="productQuery"
+        (input)="onProductQueryChange()"
+        (focus)="showSuggestions.set(true)"
+        (blur)="hideSuggestionsSoon()"
+        placeholder="Search by product name or SKU..."
+        autocomplete="off"
+      />
+      @if (showSuggestions() && productQuery.trim()) {
+        <div class="suggestions">
+          @if (searching()) {
+            <div class="suggestion-empty">Searching…</div>
+          } @else if (suggestions().length === 0) {
+            <div class="suggestion-empty">No products found.</div>
+          } @else {
+            @for (product of suggestions(); track product.id) {
+              <button type="button" class="suggestion-item" (mousedown)="selectProduct(product)">
+                <span class="suggestion-name">{{ product.name }}</span>
+                <span class="sku">{{ product.sku }}</span>
+              </button>
+            }
+          }
+        </div>
+      }
+      @if (productId) {
+        <span class="callout callout-success selected-chip">Selected: {{ selectedProductName }}</span>
+      }
+    </div>
+
+    <div class="field">
+      <label for="quantity">Quantity</label>
+      <div class="stepper">
+        <button type="button" class="btn btn-secondary" (click)="adjustQuantity(-1)">−</button>
+        <input id="quantity" class="input" type="number" [(ngModel)]="quantity" min="1" />
+        <button type="button" class="btn btn-secondary" (click)="adjustQuantity(1)">+</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-block" (click)="onReserve()" [disabled]="loading()">
+      {{ loading() ? 'Reserving…' : 'Reserve' }}
+    </button>
+
+    @if (result()) {
+      <div class="callout callout-success result-panel">
+        <div>
+          <p><strong>Reservation confirmed</strong></p>
+          <p class="reservation-meta">ID {{ result()!.id }} · <span class="badge badge-success">{{ result()!.status }}</span></p>
+          <ul class="line-list">
+            @for (line of result()!.lines; track line.inventoryBatchId) {
+              <li>Batch <span class="sku">{{ line.inventoryBatchId }}</span> — {{ line.quantity }} units</li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
+    @if (errorMessage()) {
+      <div class="callout callout-error">{{ errorMessage() }}</div>
+    }
+  </div>
 </div>

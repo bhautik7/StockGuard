@@ -17,5 +17,7 @@ public class CategoryRepository : ICategoryRepository
         _context.Categories.FirstOrDefaultAsync(c => c.Id == id, ct);
 
     public void Add(Category category) => _context.Categories.Add(category);
+    public void Update(Category category) => _context.Categories.Update(category);
+    public void Delete(Category category) => _context.Categories.Remove(category);
     public Task<int> SaveChangesAsync(CancellationToken ct) => _context.SaveChangesAsync(ct);
 }

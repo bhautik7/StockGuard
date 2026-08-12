@@ -17,5 +17,7 @@ public class SupplierRepository : ISupplierRepository
         _context.Suppliers.FirstOrDefaultAsync(s => s.Id == id, ct);
 
     public void Add(Supplier supplier) => _context.Suppliers.Add(supplier);
+    public void Update(Supplier supplier) => _context.Suppliers.Update(supplier);
+    public void Delete(Supplier supplier) => _context.Suppliers.Remove(supplier);
     public Task<int> SaveChangesAsync(CancellationToken ct) => _context.SaveChangesAsync(ct);
 }

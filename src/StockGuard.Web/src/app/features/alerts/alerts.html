@@ -1,11 +1,33 @@
-<div class="alerts-page">
-  <h1>Live Alerts</h1>
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Live Alerts</h1>
+      <p class="page-subtitle">Streamed in real time from the background inventory monitor.</p>
+    </div>
+    <span
+      class="badge status-badge"
+      [class.badge-success]="alertHub.status() === 'connected'"
+      [class.badge-warning]="alertHub.status() === 'reconnecting' || alertHub.status() === 'connecting'"
+      [class.badge-danger]="alertHub.status() === 'disconnected'"
+    >
+      <span class="status-dot"></span>
+      {{ alertHub.status() }}
+    </span>
+  </div>
+
   @if (alertHub.liveMessages().length === 0) {
-    <p>No alerts yet — waiting for the background worker...</p>
+    <div class="card empty-state">
+      <p>No alerts yet — waiting for the background worker to run its checks.</p>
+    </div>
+  } @else {
+    <ul class="alert-list">
+      @for (event of alertHub.liveMessages(); track $index) {
+        <li class="alert-item" [class]="'alert-' + severity(event.message)">
+          <span class="badge" [class]="'badge-' + severity(event.message)">{{ label(event.message) }}</span>
+          <span class="alert-message">{{ event.message }}</span>
+          <span class="alert-time">{{ event.receivedAt | date: 'shortTime' }}</span>
+        </li>
+      }
+    </ul>
   }
-  <ul>
-    @for (message of alertHub.liveMessages(); track $index) {
-      <li>{{ message }}</li>
-    }
-  </ul>
 </div>

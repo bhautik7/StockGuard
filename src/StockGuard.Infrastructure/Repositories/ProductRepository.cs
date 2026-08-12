@@ -39,5 +39,6 @@ public class ProductRepository : IProductRepository
 
     public void Add(Product product) => _context.Products.Add(product);
     public void Update(Product product) => _context.Products.Update(product);
+    public void Delete(Product product) => _context.Products.Remove(product);
     public Task<int> SaveChangesAsync(CancellationToken ct) => _context.SaveChangesAsync(ct);
 }

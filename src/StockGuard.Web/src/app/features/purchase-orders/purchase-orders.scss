@@ -1,0 +1,78 @@
+.page-error {
+  margin-bottom: 1rem;
+}
+
+.po-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.po-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.po-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+}
+
+.po-card-header:hover {
+  background: var(--color-bg);
+}
+
+.po-supplier {
+  margin-left: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.po-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.expand-icon {
+  color: var(--color-text-muted);
+  font-size: 1.125rem;
+  width: 1rem;
+  text-align: center;
+}
+
+.po-detail {
+  border-top: 1px solid var(--color-border);
+  padding: 1rem 1.5rem 1.25rem;
+}
+
+.po-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.draft-lines {
+  margin-top: -0.5rem;
+}
+
+.receive-line {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+}
+
+.receive-line-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.receive-line .field-row {
+  margin-top: 0.6rem;
+}

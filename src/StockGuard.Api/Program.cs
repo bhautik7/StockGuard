@@ -105,7 +105,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAngularDev", policy =>
         policy.WithOrigins("http://localhost:4200")
               .AllowAnyHeader()
-              .AllowAnyMethod());
+              .AllowAnyMethod()
+              .AllowCredentials());
 });
 
 var app = builder.Build();
@@ -151,6 +152,9 @@ using (var scope = app.Services.CreateScope())
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
     await RoleSeeder.SeedAsync(roleManager);
+
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    await DataSeeder.SeedAsync(context, userManager);
 }
 
 app.Run();

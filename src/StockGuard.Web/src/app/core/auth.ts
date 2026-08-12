@@ -42,4 +42,13 @@ export class Auth {
   isLoggedIn(): boolean {
     return this.currentUser() !== null;
   }
+
+  hasRole(...roles: string[]): boolean {
+    const role = this.currentUser()?.role;
+    return !!role && roles.includes(role);
+  }
+
+  get userId(): string | null {
+    return this.currentUser()?.userId ?? null;
+  }
 }

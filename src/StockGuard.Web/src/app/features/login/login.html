@@ -1,17 +1,55 @@
-<div class="login-container">
-  <h1>StockGuard Login</h1>
-  <form (ngSubmit)="onSubmit()">
-    <label>
-      Email
-      <input type="email" [(ngModel)]="email" name="email" required />
-    </label>
-    <label>
-      Password
-      <input type="password" [(ngModel)]="password" name="password" required />
-    </label>
-    <button type="submit">Log In</button>
-  </form>
-  @if (errorMessage()) {
-    <p class="error">{{ errorMessage() }}</p>
-  }
+<div class="login-page">
+  <div class="login-card card">
+    <div class="login-header">
+      <span class="brand-mark">SG</span>
+      <h1>Welcome back</h1>
+      <p class="page-subtitle">Sign in to manage StockGuard inventory.</p>
+    </div>
+
+    <form class="stack" (ngSubmit)="onSubmit()">
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          class="input"
+          type="email"
+          [(ngModel)]="email"
+          name="email"
+          autocomplete="username"
+          placeholder="you@stockguard.dev"
+          required
+        />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          class="input"
+          type="password"
+          [(ngModel)]="password"
+          name="password"
+          autocomplete="current-password"
+          placeholder="••••••••"
+          required
+        />
+      </div>
+
+      @if (errorMessage()) {
+        <div class="callout callout-error">{{ errorMessage() }}</div>
+      }
+
+      <button class="btn btn-primary btn-block" type="submit" [disabled]="loading()">
+        {{ loading() ? 'Signing in…' : 'Log In' }}
+      </button>
+    </form>
+
+    <div class="demo-hint">
+      <p>Demo accounts (password <code>Passw0rd!</code>):</p>
+      <ul>
+        <li><button type="button" (click)="fillDemo('admin@stockguard.dev')">admin&#64;stockguard.dev</button> — Administrator</li>
+        <li><button type="button" (click)="fillDemo('manager@stockguard.dev')">manager&#64;stockguard.dev</button> — Inventory Manager</li>
+        <li><button type="button" (click)="fillDemo('staff@stockguard.dev')">staff&#64;stockguard.dev</button> — Warehouse Employee</li>
+      </ul>
+    </div>
+  </div>
 </div>

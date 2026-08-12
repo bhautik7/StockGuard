@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using StockGuard.Application.DTOs;
 using StockGuard.Application.Interfaces;
 using StockGuard.Domain.Entities;
@@ -27,5 +29,41 @@ public class SuppliersController : ControllerBase
         await _repo.SaveChangesAsync(ct);
         var dto = new SupplierDto(supplier.Id, supplier.Name, supplier.ContactEmail, supplier.ContactPhone);
         return CreatedAtAction(nameof(GetAll), dto);
+    }
+
+    [Authorize(Policy = "PurchasingOrAdmin")]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<SupplierDto>> Update(Guid id, UpdateSupplierRequest request, CancellationToken ct)
+    {
+        var supplier = await _repo.GetByIdAsync(id, ct);
+        if (supplier is null) return NotFound();
+
+        supplier.Name = request.Name;
+        supplier.ContactEmail = request.ContactEmail;
+        supplier.ContactPhone = request.ContactPhone;
+        _repo.Update(supplier);
+        await _repo.SaveChangesAsync(ct);
+
+        return Ok(new SupplierDto(supplier.Id, supplier.Name, supplier.ContactEmail, supplier.ContactPhone));
+    }
+
+    [Authorize(Policy = "PurchasingOrAdmin")]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var supplier = await _repo.GetByIdAsync(id, ct);
+        if (supplier is null) return NotFound();
+
+        _repo.Delete(supplier);
+        try
+        {
+            await _repo.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict("This supplier has products or purchase orders linked to it and cannot be deleted.");
+        }
+
+        return NoContent();
     }
 }
