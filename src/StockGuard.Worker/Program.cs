@@ -7,7 +7,8 @@ using StockGuard.Worker;
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null)));
 
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddHostedService<OutboxPublisherWorker>();
