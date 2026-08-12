@@ -8,14 +8,17 @@ using Xunit;
 
 namespace StockGuard.IntegrationTests;
 
-public class AuthorizationTests : IClassFixture<WebApplicationFactory<Program>>
+public class AuthorizationTests : IClassFixture<TestWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+   private readonly TestWebApplicationFactory _factory;
 
-    public AuthorizationTests(WebApplicationFactory<Program> factory)
+    public AuthorizationTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
     }
+
+   
+    
 
     [Fact]
     public async Task CreateProduct_AsAuditor_Returns403Forbidden()
