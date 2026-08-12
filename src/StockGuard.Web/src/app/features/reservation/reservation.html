@@ -1,0 +1,30 @@
+<div class="reservation-page">
+  <h1>Reserve Inventory</h1>
+
+  <label>
+    Product ID
+    <input [(ngModel)]="productId" placeholder="Paste a product ID" />
+  </label>
+  <label>
+    Quantity
+    <input type="number" [(ngModel)]="quantity" min="1" />
+  </label>
+  <button (click)="onReserve()" [disabled]="loading()">
+    {{ loading() ? 'Reserving...' : 'Reserve' }}
+  </button>
+
+  @if (result()) {
+    <div class="success">
+      <p>Reservation {{ result()!.id }} — status: {{ result()!.status }}</p>
+      <ul>
+        @for (line of result()!.lines; track line.inventoryBatchId) {
+          <li>Batch {{ line.inventoryBatchId }}: {{ line.quantity }} units</li>
+        }
+      </ul>
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+</div>
