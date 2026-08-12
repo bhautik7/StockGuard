@@ -1,0 +1,11 @@
+<div class="alerts-page">
+  <h1>Live Alerts</h1>
+  @if (alertHub.liveMessages().length === 0) {
+    <p>No alerts yet — waiting for the background worker...</p>
+  }
+  <ul>
+    @for (message of alertHub.liveMessages(); track $index) {
+      <li>{{ message }}</li>
+    }
+  </ul>
+</div>
